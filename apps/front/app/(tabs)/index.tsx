@@ -1,98 +1,172 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { CreatePostSchema } from "@acme/db/schema";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { AuthShowcase } from "@/components/auth-showcase";
+import { useTRPC } from "@/lib/trpc";
+
+import type { RouterOutputs } from "@acme/api";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const createPost = useMutation(
+    trpc.post.create.mutationOptions({
+      onSuccess: () => {
+        form.reset();
+        void queryClient.invalidateQueries(trpc.post.pathFilter());
+      },
+      onError: (err) => {
+        Alert.alert(
+          "Error",
+          err.data?.code === "UNAUTHORIZED"
+            ? "You must be logged in to post"
+            : "Failed to create post",
+        );
+      },
+    }),
+  );
+
+  const form = useForm({
+    defaultValues: { title: "", content: "" },
+    validators: { onSubmit: CreatePostSchema },
+    onSubmit: ({ value }) => createPost.mutate(value),
+  });
+
+  const { data: posts, isPending } = useQuery(trpc.post.all.queryOptions());
+
+  return (
+    <ScrollView className="flex-1 bg-background">
+      <View className="container mx-auto max-w-2xl gap-6 px-4 py-12">
+        <Text className="text-foreground text-center text-3xl font-bold">
+          Create T3 Turbo
+        </Text>
+        <AuthShowcase />
+
+        <View>
+          <Text className="text-foreground mb-1 text-sm font-medium">
+            Title
+          </Text>
+          <form.Field name="title">
+            {(field) => (
+              <TextInput
+                className="border-border bg-background text-foreground rounded-md border px-3 py-2"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Title"
+                editable={!createPost.isPending}
+              />
+            )}
+          </form.Field>
+        </View>
+        <View>
+          <Text className="text-foreground mb-1 text-sm font-medium">
+            Content
+          </Text>
+          <form.Field name="content">
+            {(field) => (
+              <TextInput
+                className="border-border bg-background text-foreground rounded-md border px-3 py-2"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Content"
+                multiline
+                editable={!createPost.isPending}
+              />
+            )}
+          </form.Field>
+        </View>
+        <Pressable
+          className="bg-primary items-center rounded-lg py-3"
+          onPress={() => form.handleSubmit()}
+          disabled={createPost.isPending}
+        >
+          <Text className="text-primary-foreground font-semibold">
+            {createPost.isPending ? "Creating…" : "Create"}
+          </Text>
+        </Pressable>
+
+        <View className="gap-4">
+          {isPending ? (
+            <ActivityIndicator />
+          ) : !posts || posts.length === 0 ? (
+            <Text className="text-muted-foreground text-center">
+              No posts yet
+            </Text>
+          ) : (
+            posts.map((p) => (
+              <PostCard
+                key={p.id}
+                post={p}
+                onDeleteError={(msg) => Alert.alert("Error", msg)}
+                onInvalidate={() =>
+                  queryClient.invalidateQueries(trpc.post.pathFilter())
+                }
+                trpc={trpc}
+              />
+            ))
+          )}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+function PostCard({
+  post,
+  onDeleteError,
+  onInvalidate,
+  trpc,
+}: {
+  post: RouterOutputs["post"]["all"][number];
+  onDeleteError: (msg: string) => void;
+  onInvalidate: () => void;
+  trpc: ReturnType<typeof useTRPC>;
+}) {
+  const queryClient = useQueryClient();
+  const deletePost = useMutation(
+    trpc.post.delete.mutationOptions({
+      onSuccess: () => void onInvalidate(),
+      onError: (err) =>
+        onDeleteError(
+          err.data?.code === "UNAUTHORIZED"
+            ? "You must be logged in to delete"
+            : "Failed to delete",
+        ),
+    }),
+  );
+
+  return (
+    <View className="bg-muted rounded-lg p-4">
+      <View className="flex-row items-start justify-between gap-2">
+        <View className="flex-1">
+          <Text className="text-foreground text-lg font-semibold">
+            {post.title}
+          </Text>
+          <Text className="text-muted-foreground mt-1 text-sm">
+            {post.content}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => deletePost.mutate(post.id)}
+          disabled={deletePost.isPending}
+          className="rounded px-2 py-1"
+        >
+          <Text className="text-sm font-medium text-red-600">Delete</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
