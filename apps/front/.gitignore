@@ -25,7 +25,6 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-pnpm-debug.log*
 
 # macOS
 .DS_Store
@@ -39,19 +38,6 @@ pnpm-debug.log*
 
 app-example
 
-# Turborepo
-.turbo
-
 # generated native folders
 /ios
 /android
-apps/tanstack-start/.cache
-apps/tanstack-start/.output
-*/.cache
-packages/auth/.cache
-packages/api/.cache
-packages/validators/.cache
-packages/ui/.cache
-packages/db/.cache
-tooling/prettier/.cache
-tooling/eslint/.cache

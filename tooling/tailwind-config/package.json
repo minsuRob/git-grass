@@ -1,0 +1,10 @@
+{
+  "name": "@acme/tailwind-config",
+  "private": true,
+  "exports": {
+    "./theme": "./theme.css"
+  },
+  "files": [
+    "theme.css"
+  ]
+}

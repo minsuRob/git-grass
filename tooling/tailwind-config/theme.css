@@ -1,0 +1,26 @@
+@theme {
+  /* Breakpoints */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  /* Colors – light/dark are overridden by @acme/ui or app */
+  --color-border: oklch(0.92 0.004 258);
+  --color-input: oklch(0.92 0.004 258);
+  --color-ring: oklch(0.55 0.15 258);
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.15 0.02 258);
+
+  /* Typography */
+  --tracking-normal: 0em;
+}
+
+.dark {
+  --color-border: oklch(0.28 0.02 258);
+  --color-input: oklch(0.28 0.02 258);
+  --color-ring: oklch(0.7 0.15 258);
+  --color-background: oklch(0.15 0.02 258);
+  --color-foreground: oklch(0.95 0.01 258);
+}
