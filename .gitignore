@@ -39,6 +39,9 @@ pnpm-debug.log*
 
 app-example
 
+# Turborepo
+.turbo
+
 # generated native folders
 /ios
 /android

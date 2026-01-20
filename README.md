@@ -1,6 +1,12 @@
-# Welcome to your Expo app 👋
+# Git Grass Monorepo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a [Turborepo](https://turbo.build/repo) monorepo containing the Git Grass project.
+
+## What's inside?
+
+This monorepo uses [pnpm](https://pnpm.io) as a package manager and includes the following apps:
+
+- `apps/rn` - React Native app built with Expo
 
 ## Get started
 
@@ -10,41 +16,38 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    pnpm install
    ```
 
-2. Start the app
+2. Start the React Native app
 
    ```bash
-   pnpm expo start
+   pnpm --filter @gitgrass/rn start
    ```
 
-In the output, you'll find options to open the app in a
+   Or use turbo:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   ```bash
+   pnpm dev
+   ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Available Scripts
 
-## Get a fresh project
+- `pnpm dev` - Start all apps in development mode
+- `pnpm build` - Build all apps
+- `pnpm lint` - Lint all apps
+- `pnpm start` - Start all apps
 
-When you're ready, run:
+## Project Structure
 
-```bash
-pnpm run reset-project
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+.
+├── apps/
+│   └── rn/          # React Native app (Expo)
+├── packages/        # Shared packages (future)
+├── turbo.json       # Turborepo configuration
+└── pnpm-workspace.yaml
+```
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Turborepo Documentation](https://turbo.build/repo/docs)
+- [Expo Documentation](https://docs.expo.dev/)
+- [pnpm Documentation](https://pnpm.io/)
