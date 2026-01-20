@@ -1,3 +1,6 @@
+import { db } from "@acme/db/client";
+import { account, githubConnections } from "@acme/db/schema";
+import { and, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 export const authRouter = createTRPCRouter({
@@ -46,9 +49,20 @@ export const authRouter = createTRPCRouter({
   // GitHub 연결 해제
   disconnectGitHub: protectedProcedure.mutation(async ({ ctx }) => {
     try {
-      // 사용자의 GitHub 연결 정보 제거
-      // 실제 구현에서는 데이터베이스에서 GitHub 토큰을 제거해야 함
-      console.log(`Disconnecting GitHub for user: ${ctx.user.id}`);
+      // GitHub 연결 정보 제거
+      await db
+        .delete(githubConnections)
+        .where(eq(githubConnections.userId, ctx.user.id));
+
+      // better-auth account 정보도 제거
+      await db
+        .delete(account)
+        .where(
+          and(
+            eq(account.userId, ctx.user.id),
+            eq(account.providerId, "github")
+          )
+        );
       
       return {
         success: true,
@@ -73,5 +87,39 @@ export const authRouter = createTRPCRouter({
       createdAt: ctx.user.createdAt,
       updatedAt: ctx.user.updatedAt,
     };
+  }),
+
+  // GitHub 연결 상태 확인
+  getGitHubConnectionStatus: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      // GitHub 연결 정보 조회
+      const connection = await db
+        .select()
+        .from(githubConnections)
+        .where(eq(githubConnections.userId, ctx.user.id))
+        .limit(1);
+
+      if (connection.length === 0) {
+        return {
+          connected: false,
+          githubUsername: null,
+          lastSyncAt: null,
+        };
+      }
+
+      const githubConnection = connection[0]!;
+      return {
+        connected: true,
+        githubUsername: githubConnection.githubUsername,
+        lastSyncAt: githubConnection.lastSyncAt?.toISOString() || null,
+      };
+    } catch (error) {
+      console.error("GitHub connection status error:", error);
+      return {
+        connected: false,
+        githubUsername: null,
+        lastSyncAt: null,
+      };
+    }
   }),
 });
