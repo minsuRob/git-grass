@@ -36,6 +36,8 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
+*.tsbuildinfo.json
+.cache/
 
 app-example
 
