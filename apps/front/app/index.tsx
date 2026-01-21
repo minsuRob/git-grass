@@ -2,6 +2,7 @@ import { ScrollView, Text, View } from "react-native";
 import { ActivityMetrics } from "../src/components/ActivityMetrics";
 import { CalendarHeatmap } from "../src/components/CalendarHeatmap";
 import { DashboardLayout } from "../src/components/DashboardLayout";
+import { GitHubConnection } from "../src/components/GitHubConnection";
 import { ProjectStats } from "../src/components/ProjectStats";
 import { TrendChart } from "../src/components/TrendChart";
 import { trpc } from "../src/lib/trpc";
@@ -37,6 +38,8 @@ export default function Dashboard() {
     error: reposError 
   } = trpc.github.getRepositories.useQuery();
 
+  const { data: session } = trpc.auth.getSession.useQuery();
+
   return (
     <DashboardLayout>
       <ScrollView className="flex-1">
@@ -46,6 +49,17 @@ export default function Dashboard() {
             <Text className="text-github-muted">
               매일의 작업 현황을 추적하고 분석하세요
             </Text>
+          </View>
+
+          {/* GitHub 연결 상태 */}
+          <View className="mb-6">
+            <Text className="text-lg font-semibold text-github-text mb-3">
+              GitHub 연결
+            </Text>
+            <GitHubConnection
+              isConnected={!!session?.user?.githubId}
+              username={session?.user?.username}
+            />
           </View>
 
           {/* 활동 메트릭 */}
