@@ -1,5 +1,6 @@
 import type { CalendarData } from "@acme/validators";
-import { ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 interface CalendarHeatmapProps {
   data: CalendarData[];
@@ -8,6 +9,9 @@ interface CalendarHeatmapProps {
 }
 
 export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+
   if (loading) {
     return (
       <View className="bg-github-border rounded-lg p-4">
@@ -61,7 +65,9 @@ export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) 
     );
   }
 
-  const getLevelColor = (level: number) => {
+  const getLevelColor = (level: number, isSelected: boolean = false) => {
+    if (isSelected) return "bg-github-blue border border-github-blue";
+    
     switch (level) {
       case 0:
         return "bg-gray-800";
@@ -101,8 +107,62 @@ export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) 
   // 최근 12주만 표시
   const recentWeeks = weeks.slice(-12);
 
+  const selectedData = selectedDate ? data.find(d => d.date === selectedDate) : null;
+
+  const getMonthName = (monthIndex: number) => {
+    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+    return months[monthIndex];
+  };
+
+  const totalCommits = data.reduce((sum, day) => sum + day.count, 0);
+  const activeDays = data.filter(day => day.count > 0).length;
+  const maxDay = data.reduce((max, day) => day.count > max.count ? day : max, data[0]);
+
   return (
     <View className="bg-github-border rounded-lg p-4">
+      {/* 월 네비게이션 */}
+      <View className="flex-row items-center justify-between mb-4">
+        <Pressable
+          onPress={() => setCurrentMonth(prev => (prev - 1 + 12) % 12)}
+          className="bg-github-bg border border-github-border rounded px-2 py-1"
+        >
+          <Text className="text-github-muted">←</Text>
+        </Pressable>
+        
+        <Text className="text-github-text font-medium">
+          {getMonthName(currentMonth)} 활동
+        </Text>
+        
+        <Pressable
+          onPress={() => setCurrentMonth(prev => (prev + 1) % 12)}
+          className="bg-github-bg border border-github-border rounded px-2 py-1"
+        >
+          <Text className="text-github-muted">→</Text>
+        </Pressable>
+      </View>
+
+      {/* 선택된 날짜 정보 */}
+      {selectedData && (
+        <View className="bg-github-bg rounded p-3 mb-4">
+          <Text className="text-github-text font-medium">
+            {new Date(selectedData.date).toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long'
+            })}
+          </Text>
+          <Text className="text-github-muted mt-1">
+            {selectedData.count}개의 커밋
+          </Text>
+          {selectedData.count > 0 && (
+            <Text className="text-github-accent text-sm mt-1">
+              활동 레벨: {selectedData.level}/4
+            </Text>
+          )}
+        </View>
+      )}
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
           {/* 요일 라벨 */}
@@ -121,11 +181,18 @@ export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) 
               <View key={weekIndex} className="mr-1">
                 {Array.from({ length: 7 }, (_, dayIndex) => {
                   const dayData = week.find(d => new Date(d.date).getDay() === dayIndex);
+                  const isSelected = dayData?.date === selectedDate;
+                  
                   return (
-                    <View
+                    <Pressable
                       key={dayIndex}
+                      onPress={() => {
+                        if (dayData) {
+                          setSelectedDate(selectedDate === dayData.date ? null : dayData.date);
+                        }
+                      }}
                       className={`w-3 h-3 mb-1 rounded-sm ${
-                        dayData ? getLevelColor(dayData.level) : "bg-gray-800"
+                        dayData ? getLevelColor(dayData.level, isSelected) : "bg-gray-800"
                       }`}
                     />
                   );
@@ -146,6 +213,22 @@ export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) 
               ))}
             </View>
             <Text className="text-xs text-github-muted">많음</Text>
+          </View>
+
+          {/* 통계 정보 */}
+          <View className="flex-row justify-between mt-3 pt-3 border-t border-github-border">
+            <View className="items-center">
+              <Text className="text-github-muted text-xs">총 커밋</Text>
+              <Text className="text-github-text font-medium">{totalCommits}</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-github-muted text-xs">활동 일수</Text>
+              <Text className="text-github-text font-medium">{activeDays}일</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-github-muted text-xs">최고 기록</Text>
+              <Text className="text-github-text font-medium">{maxDay?.count || 0}</Text>
+            </View>
           </View>
         </View>
       </ScrollView>

@@ -1,5 +1,6 @@
 import type { ActivityMetrics as ActivityMetricsType } from "@acme/validators";
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
 
 interface ActivityMetricsProps {
   metrics?: ActivityMetricsType;
@@ -8,6 +9,8 @@ interface ActivityMetricsProps {
 }
 
 export function ActivityMetrics({ metrics, loading, error }: ActivityMetricsProps) {
+  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('today');
+
   if (loading) {
     return (
       <View className="bg-github-border rounded-lg p-4">
@@ -80,35 +83,101 @@ export function ActivityMetrics({ metrics, loading, error }: ActivityMetricsProp
     }
   };
 
+  const getSelectedValue = () => {
+    switch (selectedPeriod) {
+      case 'today':
+        return metrics.todayCommits;
+      case 'week':
+        return metrics.weeklyCommits;
+      case 'month':
+        return metrics.monthlyCommits;
+      default:
+        return metrics.todayCommits;
+    }
+  };
+
+  const getSelectedLabel = () => {
+    switch (selectedPeriod) {
+      case 'today':
+        return '오늘';
+      case 'week':
+        return '이번 주';
+      case 'month':
+        return '이번 달';
+      default:
+        return '오늘';
+    }
+  };
+
   return (
     <View className="bg-github-border rounded-lg p-4">
-      <View className="flex-row justify-between items-center mb-4">
-        <View className="flex-1">
-          <Text className="text-3xl font-bold text-github-text">
-            {metrics.todayCommits}
-          </Text>
-          <Text className="text-github-muted text-sm">오늘 커밋</Text>
-        </View>
-        
-        <View className="flex-1 items-center">
-          <Text className="text-xl font-semibold text-github-text">
-            {metrics.weeklyCommits}
-          </Text>
-          <Text className="text-github-muted text-sm">이번 주</Text>
-        </View>
-        
-        <View className="flex-1 items-end">
-          <Text className="text-xl font-semibold text-github-text">
-            {metrics.monthlyCommits}
-          </Text>
-          <Text className="text-github-muted text-sm">이번 달</Text>
-        </View>
+      {/* 메인 메트릭 표시 */}
+      <View className="items-center mb-4">
+        <Text className="text-4xl font-bold text-github-text mb-2">
+          {getSelectedValue()}
+        </Text>
+        <Text className="text-github-muted text-lg">
+          {getSelectedLabel()} 커밋
+        </Text>
       </View>
 
+      {/* 기간 선택 버튼 */}
+      <View className="flex-row justify-center space-x-2 mb-4">
+        {[
+          { key: 'today' as const, label: '오늘', value: metrics.todayCommits },
+          { key: 'week' as const, label: '주간', value: metrics.weeklyCommits },
+          { key: 'month' as const, label: '월간', value: metrics.monthlyCommits },
+        ].map((period) => (
+          <Pressable
+            key={period.key}
+            onPress={() => setSelectedPeriod(period.key)}
+            className={`px-3 py-2 rounded ${
+              selectedPeriod === period.key 
+                ? 'bg-github-accent' 
+                : 'bg-github-bg border border-github-border'
+            }`}
+          >
+            <Text className={`text-sm font-medium ${
+              selectedPeriod === period.key ? 'text-white' : 'text-github-muted'
+            }`}>
+              {period.label}
+            </Text>
+            <Text className={`text-xs ${
+              selectedPeriod === period.key ? 'text-white' : 'text-github-text'
+            }`}>
+              {period.value}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* 트렌드 정보 */}
       <View className="flex-row items-center justify-center pt-2 border-t border-github-border">
         <Text className={`text-sm font-medium ${getTrendColor(metrics.trend)}`}>
           {getTrendSymbol(metrics.trend)} {Math.abs(metrics.percentageChange)}% 지난주 대비
         </Text>
+      </View>
+
+      {/* 추가 통계 */}
+      <View className="flex-row justify-between mt-3 pt-3 border-t border-github-border">
+        <View className="items-center">
+          <Text className="text-github-muted text-xs">평균 (일)</Text>
+          <Text className="text-github-text text-sm font-medium">
+            {Math.round(metrics.weeklyCommits / 7)}
+          </Text>
+        </View>
+        <View className="items-center">
+          <Text className="text-github-muted text-xs">최고 기록</Text>
+          <Text className="text-github-text text-sm font-medium">
+            {Math.max(metrics.todayCommits, metrics.weeklyCommits, metrics.monthlyCommits)}
+          </Text>
+        </View>
+        <View className="items-center">
+          <Text className="text-github-muted text-xs">활동 일수</Text>
+          <Text className="text-github-text text-sm font-medium">
+            {metrics.weeklyCommits > 0 ? '7일' : '0일'}
+          </Text>
+        </View>
       </View>
     </View>
   );
