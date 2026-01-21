@@ -1,5 +1,9 @@
+import { fileURLToPath } from "url";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db } from "./client";
+
+const __filename = fileURLToPath(import.meta.url);
+const isMainModule = process.argv[1]?.endsWith("migrate.ts") || process.argv[1] === __filename;
 
 /**
  * 데이터베이스 마이그레이션 실행
@@ -36,8 +40,8 @@ export async function seedDatabase() {
   }
 }
 
-// CLI에서 직접 실행할 수 있도록
-if (require.main === module) {
+// CLI에서 직접 실행할 수 있도록 (ESM 호환)
+if (isMainModule) {
   const command = process.argv[2];
   
   if (command === "migrate") {

@@ -46,17 +46,5 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   });
 });
 
-// 라우터들
-import { authRouter } from "./router/auth";
-import { dashboardRouter } from "./router/dashboard";
-import { githubRouter } from "./router/github";
-import { syncRouter } from "./router/sync";
-
-export const appRouter = createTRPCRouter({
-  auth: authRouter,
-  dashboard: dashboardRouter,
-  github: githubRouter,
-  sync: syncRouter,
-});
-
-export type AppRouter = typeof appRouter;
+// appRouter는 ./appRouter.ts 로 분리 (순환 참조 방지)
+export type { AppRouter } from "./appRouter";

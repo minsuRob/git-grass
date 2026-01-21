@@ -6,7 +6,7 @@ import { authMiddleware, createAuthHandler } from "./auth";
 import { webhookRouter } from "./router/webhook";
 import { schedulerService } from "./services/scheduler";
 import { syncService } from "./services/sync";
-import { appRouter } from "./trpc";
+import { appRouter } from "./appRouter";
 
 const app = new Hono();
 
@@ -14,7 +14,7 @@ const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3000", "http://localhost:8081"],
+    origin: ["http://localhost:3000", "http://localhost:8081", "http://localhost:8082"],
     allowHeaders: ["Content-Type", "Authorization", "Cookie", "X-Hub-Signature-256", "X-GitHub-Event"],
     allowMethods: ["POST", "GET", "OPTIONS"],
     exposeHeaders: ["Content-Length", "Set-Cookie"],
