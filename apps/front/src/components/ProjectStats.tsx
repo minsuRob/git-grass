@@ -4,13 +4,48 @@ import { ScrollView, Text, View } from "react-native";
 interface ProjectStatsProps {
   projects: ProjectStatsType[];
   loading: boolean;
+  error?: Error | null;
 }
 
-export function ProjectStats({ projects, loading }: ProjectStatsProps) {
+export function ProjectStats({ projects, loading, error }: ProjectStatsProps) {
   if (loading) {
     return (
       <View className="bg-github-border rounded-lg p-4">
-        <Text className="text-github-muted">로딩 중...</Text>
+        <ScrollView>
+          {Array.from({ length: 3 }, (_, index) => (
+            <View 
+              key={index} 
+              className={`py-3 ${index < 2 ? 'border-b border-github-border' : ''}`}
+            >
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="bg-gray-700 h-4 w-32 rounded" />
+                <View className="bg-gray-700 h-4 w-16 rounded" />
+              </View>
+              
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <View className="w-3 h-3 rounded-full mr-2 bg-gray-700" />
+                  <View className="bg-gray-700 h-3 w-20 rounded" />
+                </View>
+                
+                <View className="bg-gray-700 h-3 w-12 rounded" />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="bg-github-border rounded-lg p-4">
+        <Text className="text-red-400 text-center">
+          프로젝트 데이터를 불러오는데 실패했습니다
+        </Text>
+        <Text className="text-github-muted text-sm text-center mt-1">
+          네트워크 연결을 확인해주세요
+        </Text>
       </View>
     );
   }
@@ -18,7 +53,10 @@ export function ProjectStats({ projects, loading }: ProjectStatsProps) {
   if (!projects.length) {
     return (
       <View className="bg-github-border rounded-lg p-4">
-        <Text className="text-github-muted">프로젝트가 없습니다</Text>
+        <Text className="text-github-muted text-center">프로젝트가 없습니다</Text>
+        <Text className="text-github-muted text-sm text-center mt-1">
+          GitHub를 연결하여 실제 저장소를 확인하세요
+        </Text>
       </View>
     );
   }

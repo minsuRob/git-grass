@@ -4,13 +4,48 @@ import { ScrollView, Text, View } from "react-native";
 interface CalendarHeatmapProps {
   data: CalendarData[];
   loading: boolean;
+  error?: Error | null;
 }
 
-export function CalendarHeatmap({ data, loading }: CalendarHeatmapProps) {
+export function CalendarHeatmap({ data, loading, error }: CalendarHeatmapProps) {
   if (loading) {
     return (
       <View className="bg-github-border rounded-lg p-4">
-        <Text className="text-github-muted">로딩 중...</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View>
+            {/* 요일 라벨 스켈레톤 */}
+            <View className="flex-row mb-2">
+              <View className="w-8" />
+              {Array.from({ length: 7 }, (_, index) => (
+                <View key={index} className="bg-gray-700 w-3 h-3 rounded mr-1" />
+              ))}
+            </View>
+
+            {/* 캘린더 그리드 스켈레톤 */}
+            <View className="flex-row">
+              {Array.from({ length: 12 }, (_, weekIndex) => (
+                <View key={weekIndex} className="mr-1">
+                  {Array.from({ length: 7 }, (_, dayIndex) => (
+                    <View key={dayIndex} className="w-3 h-3 mb-1 bg-gray-700 rounded-sm" />
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="bg-github-border rounded-lg p-4">
+        <Text className="text-red-400 text-center">
+          캘린더 데이터를 불러오는데 실패했습니다
+        </Text>
+        <Text className="text-github-muted text-sm text-center mt-1">
+          네트워크 연결을 확인해주세요
+        </Text>
       </View>
     );
   }
@@ -18,7 +53,10 @@ export function CalendarHeatmap({ data, loading }: CalendarHeatmapProps) {
   if (!data.length) {
     return (
       <View className="bg-github-border rounded-lg p-4">
-        <Text className="text-github-muted">데이터가 없습니다</Text>
+        <Text className="text-github-muted text-center">데이터가 없습니다</Text>
+        <Text className="text-github-muted text-sm text-center mt-1">
+          GitHub를 연결하여 실제 데이터를 확인하세요
+        </Text>
       </View>
     );
   }
