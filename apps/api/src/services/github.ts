@@ -1,6 +1,9 @@
-import { db } from "@acme/db/client";
-import { githubActivities, githubConnections, repositories } from "@acme/db/schema";
-import { eq } from "drizzle-orm";
+import {
+    DailyStatsOperations,
+    GitHubActivityOperations,
+    GitHubConnectionOperations,
+    RepositoryOperations,
+} from "@acme/db";
 
 /**
  * GitHub API 클라이언트
@@ -75,18 +78,13 @@ export class GitHubService {
   async syncUserData(userId: string): Promise<SyncResult> {
     try {
       // GitHub 연결 정보 조회
-      const connection = await db
-        .select()
-        .from(githubConnections)
-        .where(eq(githubConnections.userId, userId))
-        .limit(1);
+      const connection = await GitHubConnectionOperations.findByUserId(userId);
 
-      if (!connection.length) {
+      if (!connection) {
         throw new Error("GitHub connection not found");
       }
 
-      const githubConnection = connection[0]!;
-      const githubService = new GitHubService(githubConnection.accessToken);
+      const githubService = new GitHubService(connection.accessToken);
 
       // 사용자 정보 조회
       const githubUser = await githubService.getUser();
@@ -97,32 +95,17 @@ export class GitHubService {
 
       for (const repo of repos) {
         // 저장소 정보 저장/업데이트
-        await db
-          .insert(repositories)
-          .values({
-            userId,
-            githubId: repo.id,
-            name: repo.name,
-            fullName: repo.full_name,
-            description: repo.description,
-            language: repo.language,
-            isPrivate: repo.private,
-            url: repo.html_url,
-            lastSyncAt: new Date(),
-          })
-          .onConflictDoUpdate({
-            target: [repositories.userId, repositories.githubId],
-            set: {
-              name: repo.name,
-              fullName: repo.full_name,
-              description: repo.description,
-              language: repo.language,
-              isPrivate: repo.private,
-              url: repo.html_url,
-              lastSyncAt: new Date(),
-              updatedAt: new Date(),
-            },
-          });
+        await RepositoryOperations.upsert({
+          userId,
+          githubId: repo.id,
+          name: repo.name,
+          fullName: repo.full_name,
+          description: repo.description,
+          language: repo.language,
+          isPrivate: repo.private,
+          url: repo.html_url,
+          lastSyncAt: new Date(),
+        });
 
         syncedRepos++;
       }
@@ -130,36 +113,39 @@ export class GitHubService {
       // 활동 이벤트 동기화
       const events = await githubService.getEvents(githubUser.login);
       let syncedActivities = 0;
+      const processedDates = new Set<string>();
 
       for (const event of events) {
         if (event.type === "PushEvent" && event.payload?.commits) {
           for (const commit of event.payload.commits) {
-            await db
-              .insert(githubActivities)
-              .values({
-                userId,
-                type: "commit",
-                repositoryName: event.repo.name,
-                repositoryUrl: `https://github.com/${event.repo.name}`,
-                commitSha: commit.sha,
-                message: commit.message,
-                timestamp: new Date(event.created_at),
-              })
-              .onConflictDoNothing();
+            const activity = await GitHubActivityOperations.createIfNotExists({
+              userId,
+              type: "commit",
+              repositoryName: event.repo.name,
+              repositoryUrl: `https://github.com/${event.repo.name}`,
+              commitSha: commit.sha,
+              message: commit.message,
+              timestamp: new Date(event.created_at),
+            });
 
-            syncedActivities++;
+            if (activity) {
+              syncedActivities++;
+              
+              // 해당 날짜의 일별 통계 재계산
+              const activityDate = new Date(event.created_at);
+              const dateKey = activityDate.toISOString().split('T')[0]!;
+              
+              if (!processedDates.has(dateKey)) {
+                await DailyStatsOperations.recalculateForUser(userId, activityDate);
+                processedDates.add(dateKey);
+              }
+            }
           }
         }
       }
 
       // 연결 정보 업데이트
-      await db
-        .update(githubConnections)
-        .set({
-          lastSyncAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(githubConnections.userId, userId));
+      await GitHubConnectionOperations.updateLastSync(userId);
 
       return {
         success: true,
@@ -184,17 +170,13 @@ export class GitHubService {
  * 사용자의 GitHub 서비스 인스턴스 생성
  */
 export async function createGitHubService(userId: string): Promise<GitHubService | null> {
-  const connection = await db
-    .select()
-    .from(githubConnections)
-    .where(eq(githubConnections.userId, userId))
-    .limit(1);
+  const connection = await GitHubConnectionOperations.findByUserId(userId);
 
-  if (!connection.length) {
+  if (!connection) {
     return null;
   }
 
-  return new GitHubService(connection[0]!.accessToken);
+  return new GitHubService(connection.accessToken);
 }
 
 // 타입 정의

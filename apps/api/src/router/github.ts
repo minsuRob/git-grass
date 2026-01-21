@@ -1,6 +1,4 @@
-import { db } from "@acme/db/client";
-import { githubConnections, repositories } from "@acme/db/schema";
-import { eq } from "drizzle-orm";
+import { GitHubConnectionOperations, RepositoryOperations } from "@acme/db";
 import { z } from "zod";
 import { createGitHubService } from "../services/github";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
@@ -46,12 +44,8 @@ export const githubRouter = createTRPCRouter({
   getRepositories: protectedProcedure.query(async ({ ctx }) => {
     try {
       // 데이터베이스에서 저장소 목록 조회
-      const repos = await db
-        .select()
-        .from(repositories)
-        .where(eq(repositories.userId, ctx.user.id))
-        .orderBy(repositories.updatedAt);
-
+      const repos = await RepositoryOperations.findByUserId(ctx.user.id);
+      
       if (repos.length === 0) {
         // GitHub API에서 직접 조회 (연결되어 있는 경우)
         const githubService = await createGitHubService(ctx.user.id);
@@ -88,14 +82,21 @@ export const githubRouter = createTRPCRouter({
         ];
       }
 
-      return repos.map(repo => ({
-        name: repo.name,
-        commits: 0, // TODO: 실제 커밋 수 계산
-        language: repo.language || "Unknown",
-        lastActivity: repo.updatedAt.toISOString(),
-        url: repo.url,
-        userId: ctx.user.id,
-      }));
+      // 저장소별 커밋 통계 조회
+      const commitStats = await RepositoryOperations.getCommitStats(ctx.user.id);
+      const statsMap = new Map(commitStats.map((stat) => [stat.repositoryName, stat]));
+
+      return repos.map((repo) => {
+        const stats = statsMap.get(repo.name);
+        return {
+          name: repo.name,
+          commits: stats?.commits || 0,
+          language: repo.language || "Unknown",
+          lastActivity: stats?.lastActivity?.toISOString() || repo.updatedAt.toISOString(),
+          url: repo.url,
+          userId: ctx.user.id,
+        };
+      });
     } catch (error) {
       console.error("Get repositories error:", error);
       // 에러 시 모킹 데이터 반환
@@ -172,13 +173,9 @@ export const githubRouter = createTRPCRouter({
   // GitHub 연결 상태 확인
   getConnectionStatus: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const connection = await db
-        .select()
-        .from(githubConnections)
-        .where(eq(githubConnections.userId, ctx.user.id))
-        .limit(1);
+      const connection = await GitHubConnectionOperations.findByUserId(ctx.user.id);
 
-      if (connection.length === 0) {
+      if (!connection) {
         return {
           connected: false,
           githubUsername: null,
@@ -187,11 +184,10 @@ export const githubRouter = createTRPCRouter({
         };
       }
 
-      const githubConnection = connection[0]!;
       return {
         connected: true,
-        githubUsername: githubConnection.githubUsername,
-        lastSyncAt: githubConnection.lastSyncAt?.toISOString() || null,
+        githubUsername: connection.githubUsername,
+        lastSyncAt: connection.lastSyncAt?.toISOString() || null,
         userId: ctx.user.id,
       };
     } catch (error) {
@@ -208,14 +204,19 @@ export const githubRouter = createTRPCRouter({
   // GitHub 연결 해제
   disconnect: protectedProcedure.mutation(async ({ ctx }) => {
     try {
-      await db
-        .delete(githubConnections)
-        .where(eq(githubConnections.userId, ctx.user.id));
+      const success = await GitHubConnectionOperations.deleteByUserId(ctx.user.id);
 
-      return {
-        success: true,
-        message: "GitHub connection removed successfully",
-      };
+      if (success) {
+        return {
+          success: true,
+          message: "GitHub connection removed successfully",
+        };
+      } else {
+        return {
+          success: false,
+          error: "No GitHub connection found to remove",
+        };
+      }
     } catch (error) {
       console.error("GitHub disconnect error:", error);
       return {

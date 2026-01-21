@@ -45,7 +45,7 @@ The implementation uses TypeScript throughout, with Hono for the API server, tRP
     - **Property 20: OAuth token storage**
     - **Validates: Requirements 8.1, 8.2**
 
-- [ ] 3. Build core API server with Hono and tRPC
+- [x] 3. Build core API server with Hono and tRPC
   - [ ] 3.1 Set up Hono server with tRPC integration
     - Create Hono app with CORS configuration
     - Integrate @hono/trpc-server middleware
