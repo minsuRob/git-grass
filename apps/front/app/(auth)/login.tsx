@@ -120,6 +120,17 @@ export default function LoginScreen() {
                 샘플 데이터로 기능을 미리 확인해보세요
               </Text>
             </Pressable>
+
+            {/* 데모 페이지 강제 진입 (인증/리다이렉트 없이 /demo로 직접 이동) */}
+            <Pressable
+              onPress={() => router.push("/demo")}
+              disabled={isConnecting || connectGitHub.isPending}
+              className="py-3 items-center"
+            >
+              <Text className="text-github-blue text-sm">
+                데모 페이지로 바로가기 →
+              </Text>
+            </Pressable>
           </View>
 
           {/* 에러 메시지 */}
