@@ -1,3 +1,4 @@
+import { cacheService } from "./cache";
 import { createGitHubService } from "./github";
 
 /**
@@ -82,6 +83,11 @@ export class SyncService {
         
         if (result.success) {
           console.log(`Sync successful for user ${userId} on attempt ${attempt}`);
+          
+          // 동기화 성공 시 사용자 캐시 무효화
+          const deletedCacheCount = cacheService.deleteUserCache(userId);
+          console.log(`Invalidated ${deletedCacheCount} cache entries for user ${userId}`);
+          
           return {
             ...result,
             attempt,
