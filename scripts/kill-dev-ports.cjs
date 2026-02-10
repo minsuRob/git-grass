@@ -8,9 +8,10 @@ const PORTS = [3001, 8081, 8082]; // api, front, rn
 
 for (const port of PORTS) {
   try {
-    const pids = execSync(`lsof -ti:${port}`, { encoding: "utf8" }).trim();
-    if (pids) {
-      execSync(`kill -9 ${pids}`);
+    const out = execSync(`lsof -ti:${port}`, { encoding: "utf8" }).trim();
+    if (out) {
+      const pids = out.split(/\s+/).filter(Boolean);
+      execSync(`kill -9 ${pids.join(" ")}`);
       console.log(`[kill-dev-ports] Cleared port ${port}`);
     }
   } catch {
