@@ -33,6 +33,24 @@ app.use("*", authMiddleware);
 // better-auth API 라우트
 app.use("/api/auth/*", createAuthHandler());
 
+// 세션 확인 (서버에서 로그인 여부 체크용, 쿠키 필요)
+app.get("/api/session", (c) => {
+  const user = c.get("user");
+  const session = c.get("session");
+  return c.json({
+    loggedIn: !!user,
+    user: user
+      ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        }
+      : null,
+    session: session ? { id: session.id, expiresAt: session.expiresAt } : null,
+  });
+});
+
 // tRPC 서버 설정
 app.use(
   "/trpc/*",

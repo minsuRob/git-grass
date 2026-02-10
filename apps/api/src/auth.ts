@@ -9,7 +9,8 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
   try {
     // 쿠키에서 세션 토큰 추출
     const sessionToken = getCookie(c, "better-auth.session_token");
-    
+    console.log(`[AuthMiddleware] sessionToken: ${sessionToken ? "exists" : "missing"}`);
+
     if (sessionToken) {
       // better-auth를 사용하여 세션 검증
       const session = await auth.api.getSession({
@@ -18,6 +19,7 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
         },
       });
 
+      console.log(`[AuthMiddleware] session found: ${!!session}`);
       if (session) {
         // 컨텍스트에 사용자 정보 저장
         c.set("user", session.user);
@@ -25,7 +27,7 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
       }
     }
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    console.error("[AuthMiddleware] Auth middleware error:", error);
   }
 
   await next();
@@ -36,7 +38,7 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
  */
 export async function requireAuth(c: Context, next: () => Promise<void>) {
   const user = c.get("user");
-  
+
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
   }
@@ -64,7 +66,9 @@ export function getCurrentSession(c: Context) {
 export function createAuthHandler() {
   return async (c: Context) => {
     const body = c.req.method !== "GET" ? await c.req.text() : null;
-    
+
+    console.log(`[AuthHandler] ${c.req.method} ${c.req.url}`);
+
     const request = new Request(c.req.url, {
       method: c.req.method,
       headers: c.req.header(),
@@ -72,10 +76,17 @@ export function createAuthHandler() {
     });
 
     const response = await auth.handler(request);
-    
+
     // 응답 헤더 복사
+    console.log(`[AuthHandler] Response Status: ${response.status}`);
     response.headers.forEach((value, key) => {
       c.header(key, value);
+      if (key.toLowerCase() === "location") {
+        console.log(`[AuthHandler] Redirecting to: ${value}`);
+      }
+      if (key.toLowerCase() === "set-cookie") {
+        console.log(`[AuthHandler] Setting cookie: ${value.split(';')[0]}...`);
+      }
     });
 
     // 쿠키 설정 처리

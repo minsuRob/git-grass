@@ -28,6 +28,13 @@ export const auth = betterAuth({
     "http://localhost:8082",
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ],
+  // localhost 개발: 8081→3001 cross-origin 요청 시 쿠키 공유
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: "localhost",
+    },
+  },
 });
 
 export type Session = typeof auth.$Infer.Session;

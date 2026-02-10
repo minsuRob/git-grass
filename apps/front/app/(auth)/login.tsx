@@ -5,7 +5,8 @@ import { trpc } from "../../src/lib/trpc";
 export default function LoginScreen() {
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [isConnecting, setIsConnecting] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+
   const API_BASE = "http://localhost:3001";
   const { data: signInUrlData } = trpc.auth.getGitHubSignInUrl.useQuery();
 
@@ -25,6 +26,7 @@ export default function LoginScreen() {
 
   const handleGitHubLogin = async () => {
     if (typeof window === "undefined") return;
+    setError(null);
     setIsConnecting(true);
     try {
       const res = await fetch(postUrl, {
@@ -35,14 +37,35 @@ export default function LoginScreen() {
           callbackURL: callbackURL || window.location.origin + "/",
         }),
         credentials: "include",
+        redirect: "manual", // 302를 따라가면 HTML을 받아 JSON 파싱 실패하므로 수동 처리
       });
-      const data = (await res.json()) as { url?: string; redirect?: boolean };
+      // 302면 Location 헤더로 이동 (better-auth OAuth 플로우)
+      const location = res.headers.get("Location");
+      if ((res.status === 302 || res.status === 303) && location) {
+        window.location.href = location;
+        return;
+      }
+      const raw = await res.text();
+      let data: { url?: string; message?: string; error?: string } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        setError(res.ok ? "응답 형식 오류" : `서버 오류 (${res.status}): ${raw.slice(0, 200)}`);
+        setIsConnecting(false);
+        return;
+      }
       if (data?.url) {
         window.location.href = data.url;
-      } else {
-        setIsConnecting(false);
+        return;
       }
-    } catch {
+      setError(
+        data?.message || data?.error || `로그인 URL을 받지 못함 (${res.status})`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "네트워크 오류";
+      setError(msg);
+      console.error("[GitHub 로그인]", e);
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -105,6 +128,11 @@ export default function LoginScreen() {
           {/* 로그인 옵션 */}
           <View className="space-y-3">
             {/* GitHub 로그인 */}
+            {error ? (
+              <View className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-3">
+                <Text className="text-red-400 text-sm">{error}</Text>
+              </View>
+            ) : null}
             <Pressable
               onPress={handleGitHubLogin}
               disabled={isConnecting}

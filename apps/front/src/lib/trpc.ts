@@ -19,13 +19,17 @@ export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "http://localhost:3001/trpc",
+      fetch(url, options) {
+        return fetch(url, {
+          ...options,
+          credentials: "include", // 세션 쿠키 전송 (8081→3001 cross-origin)
+        });
+      },
       headers() {
         const headers: Record<string, string> = {};
-        
         if (authToken) {
           headers.authorization = `Bearer ${authToken}`;
         }
-        
         return headers;
       },
     }),
