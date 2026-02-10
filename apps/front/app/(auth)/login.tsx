@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Dimensions, Pressable, Text, View } from "react-native";
 import { trpc } from "../../src/lib/trpc";
@@ -7,15 +6,7 @@ export default function LoginScreen() {
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [isConnecting, setIsConnecting] = useState(false);
   
-  const connectGitHub = trpc.auth.connectGitHub.useMutation({
-    onSuccess: () => {
-      router.replace("/");
-    },
-    onError: (error) => {
-      console.error("GitHub 연결 실패:", error);
-      setIsConnecting(false);
-    },
-  });
+  const { data: signInUrlData, isLoading: signInUrlLoading } = trpc.auth.getGitHubSignInUrl.useQuery();
 
   useEffect(() => {
     const onChange = (result: { window: any }) => {
@@ -27,13 +18,11 @@ export default function LoginScreen() {
   }, []);
 
   const handleGitHubLogin = () => {
+    if (!signInUrlData?.redirectUrl) return;
     setIsConnecting(true);
-    connectGitHub.mutate();
-  };
-
-  const handleDemoMode = () => {
-    // 데모 모드로 진입 (GitHub 연결 없이)
-    router.replace("/");
+    if (typeof window !== "undefined") {
+      window.location.href = signInUrlData.redirectUrl;
+    }
   };
 
   const isLargeScreen = screenData.width >= 768;
@@ -96,54 +85,18 @@ export default function LoginScreen() {
             {/* GitHub 로그인 */}
             <Pressable
               onPress={handleGitHubLogin}
-              disabled={isConnecting || connectGitHub.isPending}
+              disabled={isConnecting || !signInUrlData?.redirectUrl || signInUrlLoading}
               className={`bg-github-accent rounded-lg p-4 items-center flex-row justify-center ${
-                (isConnecting || connectGitHub.isPending) ? "opacity-50" : ""
+                isConnecting || !signInUrlData?.redirectUrl || signInUrlLoading ? "opacity-50" : ""
               }`}
             >
               <Text className="text-white text-lg mr-2">🔗</Text>
               <Text className="text-white font-semibold text-lg">
-                {isConnecting || connectGitHub.isPending ? "연결 중..." : "GitHub로 로그인"}
-              </Text>
-            </Pressable>
-
-            {/* 데모 모드 */}
-            <Pressable
-              onPress={handleDemoMode}
-              disabled={isConnecting || connectGitHub.isPending}
-              className="bg-github-bg border border-github-border rounded-lg p-4 items-center"
-            >
-              <Text className="text-github-text font-medium">
-                데모 모드로 체험하기
-              </Text>
-              <Text className="text-github-muted text-sm mt-1">
-                샘플 데이터로 기능을 미리 확인해보세요
-              </Text>
-            </Pressable>
-
-            {/* 데모 페이지 강제 진입 (인증/리다이렉트 없이 /demo로 직접 이동) */}
-            <Pressable
-              onPress={() => router.push("/demo")}
-              disabled={isConnecting || connectGitHub.isPending}
-              className="py-3 items-center"
-            >
-              <Text className="text-github-blue text-sm">
-                데모 페이지로 바로가기 →
+                {isConnecting ? "이동 중..." : signInUrlLoading ? "준비 중..." : "GitHub로 로그인"}
               </Text>
             </Pressable>
           </View>
 
-          {/* 에러 메시지 */}
-          {connectGitHub.error && (
-            <View className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
-              <Text className="text-red-400 text-center font-medium">
-                로그인에 실패했습니다
-              </Text>
-              <Text className="text-red-300 text-sm text-center mt-1">
-                네트워크 연결을 확인하고 다시 시도해주세요
-              </Text>
-            </View>
-          )}
 
           {/* 개인정보 보호 안내 */}
           <View className="mt-8 pt-6 border-t border-github-border">
