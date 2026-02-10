@@ -12,12 +12,14 @@ export const authRouter = createTRPCRouter({
     };
   }),
 
-  /** 로그인 페이지용: 로그인 없이 GitHub 로그인(리다이렉트) URL 조회 */
+  /** 로그인 페이지용: better-auth POST 엔드포인트 URL (실제 로그인은 POST + body로 진행) */
   getGitHubSignInUrl: publicProcedure.query(async () => {
     const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3001";
     const callbackURL = process.env.FRONTEND_URL || "http://localhost:8081";
-    const redirectUrl = `${baseUrl}/api/auth/signin/social?provider=github&callbackURL=${encodeURIComponent(callbackURL + "/")}`;
-    return { redirectUrl };
+    return {
+      postUrl: `${baseUrl}/api/auth/sign-in/social`,
+      callbackURL: callbackURL + "/",
+    };
   }),
 
   // GitHub 연결 URL 생성 (이미 로그인된 사용자가 GitHub 계정 연결 시)

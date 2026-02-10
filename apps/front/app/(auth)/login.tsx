@@ -6,7 +6,13 @@ export default function LoginScreen() {
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [isConnecting, setIsConnecting] = useState(false);
   
-  const { data: signInUrlData, isLoading: signInUrlLoading } = trpc.auth.getGitHubSignInUrl.useQuery();
+  const API_BASE = "http://localhost:3001";
+  const { data: signInUrlData } = trpc.auth.getGitHubSignInUrl.useQuery();
+
+  const postUrl = signInUrlData?.postUrl ?? `${API_BASE}/api/auth/sign-in/social`;
+  const callbackURL =
+    signInUrlData?.callbackURL ??
+    (typeof window !== "undefined" ? window.location.origin + "/" : "");
 
   useEffect(() => {
     const onChange = (result: { window: any }) => {
@@ -17,11 +23,27 @@ export default function LoginScreen() {
     return () => subscription?.remove();
   }, []);
 
-  const handleGitHubLogin = () => {
-    if (!signInUrlData?.redirectUrl) return;
+  const handleGitHubLogin = async () => {
+    if (typeof window === "undefined") return;
     setIsConnecting(true);
-    if (typeof window !== "undefined") {
-      window.location.href = signInUrlData.redirectUrl;
+    try {
+      const res = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: "github",
+          callbackURL: callbackURL || window.location.origin + "/",
+        }),
+        credentials: "include",
+      });
+      const data = (await res.json()) as { url?: string; redirect?: boolean };
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        setIsConnecting(false);
+      }
+    } catch {
+      setIsConnecting(false);
     }
   };
 
@@ -85,14 +107,14 @@ export default function LoginScreen() {
             {/* GitHub 로그인 */}
             <Pressable
               onPress={handleGitHubLogin}
-              disabled={isConnecting || !signInUrlData?.redirectUrl || signInUrlLoading}
+              disabled={isConnecting}
               className={`bg-github-accent rounded-lg p-4 items-center flex-row justify-center ${
-                isConnecting || !signInUrlData?.redirectUrl || signInUrlLoading ? "opacity-50" : ""
+                isConnecting ? "opacity-50" : ""
               }`}
             >
               <Text className="text-white text-lg mr-2">🔗</Text>
               <Text className="text-white font-semibold text-lg">
-                {isConnecting ? "이동 중..." : signInUrlLoading ? "준비 중..." : "GitHub로 로그인"}
+                {isConnecting ? "이동 중..." : "GitHub로 로그인"}
               </Text>
             </Pressable>
           </View>

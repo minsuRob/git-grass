@@ -25,6 +25,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => subscription?.remove();
   }, []);
 
+  // 미인증 시 로그인으로 리다이렉트 (렌더 중 router 호출 시 NavigationContainer 에러 방지)
+  useEffect(() => {
+    if (!isLoading && !session?.user) {
+      router.replace("/(auth)/login");
+    }
+  }, [isLoading, session?.user]);
+
   // 로딩 중
   if (isLoading) {
     return (
@@ -37,10 +44,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  // 인증되지 않은 경우 로그인 페이지로 리다이렉트
+  // 인증되지 않은 경우 로그인 페이지로 리다이렉트 (렌더 중 setState 방지를 위해 useEffect에서 처리)
   if (!session?.user) {
-    router.replace("/(auth)/login");
-    return null;
+    return (
+      <View className="flex-1 bg-github-bg justify-center items-center">
+        <View className="items-center">
+          <View className="bg-github-accent w-8 h-8 rounded-full mb-4 animate-pulse" />
+          <Text className="text-github-muted">로그인 페이지로 이동 중...</Text>
+        </View>
+      </View>
+    );
   }
 
   const handleDisconnect = () => {

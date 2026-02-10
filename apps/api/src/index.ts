@@ -1,3 +1,4 @@
+import "./env";
 import { serve } from "@hono/node-server";
 import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
